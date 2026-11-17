@@ -8,12 +8,17 @@ import random
 PIXABAY_API_KEY = "58677440-eac0469ff49efb80b7f26c79f"
 ELEVENLABS_API_KEY = "sk_49418b58859360cb77828fc11dd4478d5fbb95fe0e74ab74"
 
-VOICE_ACTORS = {
-    "Adam (Deep Male)": "pNInz6OBpvM9S3FwmsBx",
-    "Antoni (Friendly Male)": "ErXwbcqjndD1oXOBrbk5",
-    "Bella (Soft Female)": "EXAVITQu4vr4PUHQRh6w",
-    "Rachel (High Energy Female)": "21m00Tcm4TbcDqotnKud"
-}
+# This function gets the REAL voices currently in your account
+def get_available_voices():
+    url = "https://api.elevenlabs.io/v1/voices"
+    headers = {"xi-api-key": ELEVENLABS_API_KEY}
+    try:
+        response = requests.get(url, headers=headers)
+        voices_data = response.json()
+        voice_dict = {v['name']: v['voice_id'] for v in voices_data['voices']}
+        return voice_dict
+    except:
+        return {"Default Voice": "21m00Tcm4TbcDqotnKud"} # Fallback
 
 def get_voiceover(text, voice_id):
     url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
@@ -26,7 +31,7 @@ def get_voiceover(text, voice_id):
     response = requests.post(url, json=data, headers=headers)
     
     if response.status_code != 200:
-        return False, response.text # Return the error message
+        return False, response.text
     
     with open("voice.mp3", "wb") as f:
         f.write(response.content)
@@ -40,33 +45,35 @@ def get_video_url(query):
         return video_data['videos']['medium']['url']
     return None
 
-# --- WEBSITE ---
+# --- WEBSITE INTERFACE ---
 st.title("🎬 UGC Maker Machine")
 
-script_input = st.text_area("Script:", "Hi! Start earning rewards today.")
-visual_topic = st.text_input("Visuals:", "money")
-selected_voice = st.selectbox("Voice Actor:", list(VOICE_ACTORS.keys()))
+# Get the list of actors automatically
+voices = get_available_voices()
+
+script_input = st.text_area("What should they say?", "Hi, this is a test.")
+visual_topic = st.text_input("Background visuals:", "money")
+selected_voice_name = st.selectbox("Select Voice Actor:", list(voices.keys()))
 
 if st.button("🚀 Generate Video"):
-    with st.spinner("Processing..."):
-        # 1. Voiceover Check
-        success, message = get_voiceover(script_input, VOICE_ACTORS[selected_voice])
+    with st.spinner("Generating..."):
+        # 1. Voice
+        success, message = get_voiceover(script_input, voices[selected_voice_name])
         
         if not success:
             st.error(f"ElevenLabs Error: {message}")
-            st.info("Check if your ElevenLabs API Key is correct and has 'Text to Speech' access enabled.")
         else:
-            # 2. Video Search
+            # 2. Video
             video_url = get_video_url(visual_topic)
             if not video_url:
-                st.error("Could not find a video. Try a different visual topic.")
+                st.error("No video found for that topic.")
             else:
-                # 3. Create Final Video
                 r = requests.get(video_url, stream=True)
                 with open("bg.mp4", "wb") as f:
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk: f.write(chunk)
 
+                # 3. Stitch
                 audio = AudioFileClip("voice.mp3")
                 video = VideoFileClip("bg.mp4").subclip(0, audio.duration)
                 final = video.set_audio(audio)
