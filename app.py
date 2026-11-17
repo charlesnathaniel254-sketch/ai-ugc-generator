@@ -6,7 +6,7 @@ import os
 import random
 
 # --- CONFIGURATION ---
-PIXABAY_API_KEY = 58677440-eac0469ff49efb80b7f26c79f
+PIXABAY_API_KEY = "58677440-eac0469ff49efb80b7f26c79f"
 
 def get_video_url(query):
     url = f"https://pixabay.com/api/videos/?key={PIXABAY_API_KEY}&q={query.replace(' ', '+')}&per_page=5"
