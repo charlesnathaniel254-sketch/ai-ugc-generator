@@ -5,8 +5,8 @@ import os
 import random
 
 # --- CONFIGURATION ---
-PIXABAY_API_KEY = "YOUR_PIXABAY_KEY"
-ELEVENLABS_API_KEY = "YOUR_ELEVENLABS_KEY"
+PIXABAY_API_KEY = "58677440-eac0469ff49efb80b7f26c79f"
+ELEVENLABS_API_KEY = "sk_49418b58859360cb77828fc11dd4478d5fbb95fe0e74ab74"
 
 # Voice Actor IDs (These are real human-sounding voices)
 VOICE_ACTORS = {
