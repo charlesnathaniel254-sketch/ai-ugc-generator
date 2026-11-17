@@ -1,54 +1,45 @@
-import os
-import requests
+import streamlit as st
 from gtts import gTTS
-from moviepy.editor import TextClip, CompositeVideoClip, AudioFileClip, VideoFileClip
+from moviepy.editor import VideoFileClip, AudioFileClip
+import requests
+import os
 
-# ==========================================
-# 1. CONFIGURATION
-# ==========================================
-TOPIC = "Make money online with crypto apps"
-OUTPUT_FILENAME = "final_ugc_video.mp4"
+# --- WEBSITE INTERFACE ---
+st.set_page_config(page_title="AI UGC Maker", page_icon="🎬")
+st.title("🎬 UGC Maker Machine")
+st.write("Generate AI videos for ContentReward.com automatically.")
 
-# ==========================================
-# 2. GENERATE SCRIPT & VOICEOVER
-# ==========================================
-print("🎙️ Generating AI Voiceover...")
+# User Inputs
+script_input = st.text_area("What should the AI say?", "Enter your script here...")
+video_link = st.text_input("Background Video URL (Direct .mp4 link)", "https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/person-bicycle-car-detection.mp4")
 
-# UGC Script text for the video
-script_text = (
-    "Stop scrolling! Here is how people are making extra rewards every single day. "
-    "Check out this platform, complete simple tasks, and claim your rewards directly to your wallet. "
-    "Don't miss out, click the link in bio to start today!"
-)
+if st.button("🚀 Generate My UGC Video"):
+    with st.spinner("Creating your video... this takes about 30 seconds."):
+        try:
+            # 1. Create Voiceover
+            tts = gTTS(text=script_input, lang='en')
+            tts.save("voice.mp3")
 
-# Generate AI Voiceover (Audio MP3)
-tts = gTTS(text=script_text, lang='en', slow=False)
-tts.save("voiceover.mp3")
+            # 2. Download Video
+            r = requests.get(video_link, stream=True)
+            with open("bg.mp4", "wb") as f:
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk: f.write(chunk)
 
-# ==========================================
-# 3. DOWNLOAD HD B-ROLL VIDEO CLIPS
-# ==========================================
-print("🎥 Fetching HD Video Clips...")
+            # 3. Mix Video & Audio
+            audio = AudioFileClip("voice.mp3")
+            video = VideoFileClip("bg.mp4").subclip(0, audio.duration)
+            final = video.set_audio(audio)
+            final.write_videofile("output.mp4", fps=24, codec="libx264")
 
-# Sample high-quality background video
-video_url = "https://assets.mixkit.co/videos/preview/mixkit-hands-holding-a-smartphone-with-green-screen-41528-large.mp4"
-r = requests.get(video_url)
-with open("background.mp4", "wb") as f:
-    f.write(r.content)
+            # 4. Show Video on Website
+            st.video("output.mp4")
+            
+            # 5. Download Button
+            with open("output.mp4", "rb") as file:
+                st.download_button(label="📥 Download Video", data=file, file_name="my_ugc_video.mp4", mime="video/mp4")
+            
+            st.success("Video Finished!")
 
-# ==========================================
-# 4. ASSEMBLE FINAL VIDEO
-# ==========================================
-print("🎬 Assembling AI Video...")
-
-# Load Audio & Video
-audio_clip = AudioFileClip("voiceover.mp3")
-video_clip = VideoFileClip("background.mp4").subclip(0, audio_clip.duration)
-
-# Set Video Audio to the AI Voiceover
-final_video = video_clip.set_audio(audio_clip)
-
-# Export the Final MP4 Video
-final_video.write_videofile(OUTPUT_FILENAME, fps=24)
-
-print(f"✅ SUCCESS! Your AI Video is ready: {OUTPUT_FILENAME}")
+        except Exception as e:
+            st.error(f"Something went wrong: {e}")
